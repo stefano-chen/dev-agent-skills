@@ -1,11 +1,11 @@
 ---
 name: clean-code
-description: "Standards for writing, changing, refactoring and reviewing code so it stays readable, minimal and consistent with the codebase it lives in. Use for any task that produces or changes code (implementing a feature, fixing a bug, refactoring, cleaning up, writing tests, reviewing a diff or pull request), even when the user never mentions code quality. Not needed for questions that only ask to explain code, or for throwaway one-off commands."
+description: "Standards for writing, changing, refactoring and reviewing code so it stays readable, minimal and consistent with the codebase it lives in. Use for any task that produces or changes code (implementing a feature, fixing a bug, refactoring, cleaning up, writing tests, reviewing a diff or pull request), even when the user never mentions code quality, and whenever the user asks for SOLID, DRY, KISS, YAGNI or "best practices". Not needed for questions that only ask to explain code, or for throwaway one-off commands."
 ---
 
 # Clean Code
 
-Clean code is code the next reader can understand, change and trust quickly. You already know the textbook principles. This skill is about the judgment calls between them, and about the habits that most often make an otherwise correct change worse.
+Clean code is code the next reader can understand, change and trust quickly. You already know the textbook principles (SOLID, DRY, KISS, YAGNI). This skill is about the judgment calls between them, and about the habits that most often make an otherwise correct change worse.
 
 ## What wins when goals conflict
 
@@ -46,6 +46,15 @@ These are the most common ways a change ends up worse than it needed to be. Chec
 - **Tests bent to pass.** Weakening an assertion, skipping a test, or special-casing test input in production code. If a test fails, either the code is wrong or the test's expectation is out of date; work out which and say so.
 - **Unverified claims.** Saying "tests pass" or "this works" without having run anything. Run it, or state plainly what you could not run.
 
+## When the principles pull against each other
+
+SOLID, DRY, KISS and YAGNI each fix a real problem, and each causes one when applied on reflex. KISS and YAGNI are the starting point. DRY and SOLID are remedies for pain that has already shown up in the code, not structure to install in advance.
+
+- **DRY against KISS.** A shared helper that needs a flag per caller is the wrong abstraction and costs more than the duplication did. Inline it back and let the callers differ.
+- **Open/closed against YAGNI.** Do not build extension points for variants nobody has asked for. The evidence to wait for is editing the same `switch` or `if` chain a second or third time to add a case. At that point turn the variants into data or pluggable implementations, so the next one is an addition instead of an edit to working code.
+- **Dependency inversion against YAGNI.** Invert the dependencies that cross a boundary (database, network, clock, filesystem), because that is what makes the logic testable. An interface in front of an in-process class with one implementation is only indirection.
+- **Single responsibility against fragmentation.** "One reason to change" is about who would ask for the change (pricing rules versus invoice layout), not about size. Splitting cohesive code into tiny classes scatters one idea across many files.
+
 ## Defaults
 
 Use these where the codebase has no convention of its own. The numbers are signals to stop and look, not limits to enforce: a clear 50-line function is better than five fragments the reader has to chase.
@@ -72,6 +81,8 @@ Use these where the codebase has no convention of its own. The numbers are signa
 - Each module has one reason to change; keep things that change together close together.
 - Remove duplicated *knowledge*, not code that merely looks alike. Two similar blocks that change for different reasons should stay separate; wait for the third real repetition before abstracting.
 - Prefer composition to inheritance, and pass external dependencies (database, HTTP client, clock, randomness) in rather than reaching for them, so the code can be tested.
+- A subclass or interface implementation must work everywhere the base type is accepted: no overrides that throw "not supported", reject inputs the base accepts, or return less than it promises. If it cannot honor the contract, it is a different type, not a subtype.
+- Keep interfaces narrow and shaped by what each caller uses. A function that reads one field takes that field, not the whole object or a context bag, and an implementer should never have to stub methods it has no use for.
 - Export only what callers need.
 
 ### Types and data
@@ -166,7 +177,7 @@ function discountFor(user: User): number {
 Review the change that was made, not the code you would have written. Group findings by severity so the author knows what blocks the merge:
 
 - **Must fix:** bugs, security problems, data loss, broken tests.
-- **Should fix:** maintainability problems, missing tests for new behavior.
+- **Should fix:** maintainability problems, missing tests for new behavior, design problems the change introduces (speculative abstraction, a duplicated rule, a subtype that breaks its contract).
 - **Nice to have:** naming and style polish. Keep this short; skip anything a formatter would settle.
 
 For each finding give the location (`file:line`), the concrete impact, and a suggested fix. Say what is good when something is, and say so plainly if the change is fine as it is.
