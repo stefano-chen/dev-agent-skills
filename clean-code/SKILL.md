@@ -9,7 +9,7 @@ Clean code is code the next reader can understand, change and trust quickly. You
 
 ## What wins when goals conflict
 
-1. **What the user and the project say.** Explicit instructions, the project's instruction files for coding agents (`AGENTS.md`, `CLAUDE.md` and the like), `CONTRIBUTING.md` and linter/formatter configs override the choices below.
+1. **What the user and the project say.** Explicit instructions, a plan or spec the user approved, the project's instruction files for coding agents (`AGENTS.md`, `CLAUDE.md` and the like), `CONTRIBUTING.md` and linter/formatter configs override the choices below.
 2. **Correctness.** Clean code that does the wrong thing is worthless.
 3. **Consistency with the surrounding code.** A "better" pattern used in one file makes the codebase harder to read, not easier. Match what is there (naming, layout, error mechanism, test style), even where this skill would choose differently, and mention the disagreement instead of acting on it.
 4. **Simplicity.** The least code and the fewest concepts that fully solve the problem.
@@ -19,15 +19,6 @@ Two things sit outside this ranking, because neither an instruction nor a conven
 
 - **Defects are not conventions.** Consistency covers style, not flaws. If the neighbors concatenate SQL, swallow errors, log secrets or are buried in noise comments and needless guards, do not copy that into new code. Write the new code correctly in the project's style, leave the existing code alone, and mention the pattern in your report.
 - **Honesty about the result.** An instruction such as "just make CI green" is not a request to weaken a test, hide a failure or claim something works unverified. If the user explicitly asks for a shortcut (skip this test, hard-code that value), do it and say plainly what it leaves broken or unverified.
-
-## With other skills
-
-This skill is about what the code looks like. When other skills are active for the same task, each keeps its own subject:
-
-- An approved brief or spec (for example from a design interview) decides scope and design decisions.
-- A test-driven development skill decides the process for tests, bug fixes and refactors. The versions of those flows in this file are the short fallback for when it is not loaded.
-- A project-structure skill decides where files go.
-- Give one final report, not one per skill. If another skill prescribes a report format, use it and add whatever from "Before finishing" it lacks.
 
 ## Scale the effort to the change
 
@@ -45,7 +36,7 @@ Applying every practice to every change is its own kind of mess: a typo fix that
 
 - **Read the neighbors.** Look at the files next to the one you are changing: naming, error handling, test style, folder layout. Five minutes here prevents a change that works but looks foreign.
 - **Search before you create.** A helper, type or constant for this job often already exists. Duplicated logic drifts apart and becomes two bugs.
-- **Fix the scope.** Decide what the request covers. Anything else you notice (a nearby bug, an ugly function) goes in your final report as a suggestion, not into the diff. Unrequested edits make changes hard to review and easy to break.
+- **Fix the scope.** Decide what the request covers; when the task follows an approved plan or spec, that is the scope. Anything else you notice (a nearby bug, an ugly function) goes in your final report as a suggestion, not into the diff. Unrequested edits make changes hard to review and easy to break.
 
 ## Habits to catch in your own work
 
@@ -210,4 +201,4 @@ This applies when you changed code. Run the project's formatter, linter and test
 - [ ] New behavior is tested; no test was weakened to pass.
 - [ ] Formatter, linter and tests were actually run and are clean.
 
-Then report briefly: what changed, what you ran and its result, any trade-off you made, and anything you noticed but left out of scope.
+Then report briefly: what changed, what you ran and its result, any trade-off you made, and anything you noticed but left out of scope. If the task's final report already has a required shape, add these to it instead of writing a second report.

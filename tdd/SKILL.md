@@ -17,15 +17,16 @@ Match the ceremony to the change. Applying every section below to a one-line fix
 - **Trivial** (typo, message text, comment, rename: no logic changes): no new test. Run the related tests and stop.
 - **Small** (a one-line bug fix, a single function): one or two tests, the loop, run the related tests, report in a line or two. Skip the test list and the bug-hunting section, and baseline only the related tests. A one-line bug fix still gets its regression test.
 - **Medium** (a feature inside one module): the full loop with a test list.
-- **Large** (crosses modules, or the requirements are fuzzy): write the test list first. In an interactive session, show it to the user and wait for their go-ahead before coding. In an unattended run, or when the list comes from a plan the user already approved, put it in the report and continue. Build one thin end-to-end slice at a time. When an approved brief gives a build order, its steps are the slices, in its order. A step that adds behavior runs the loop. A step that only changes structure follows "Refactoring existing code". A step that pins existing behavior follows "Changing code that has no tests". Finish each step at green before starting the next.
+- **Large** (crosses modules, or the requirements are fuzzy): write the test list first. In an interactive session, show it to the user and wait for their go-ahead before coding. In an unattended run, or when the list comes from a plan the user already approved, put it in the report and continue. Build one thin end-to-end slice at a time, and finish each at green before starting the next.
 
-## With other skills
+## Working from an approved plan
 
-This skill is about the order of work and the evidence. When other skills are active for the same task:
+This skill is about the order of work and the evidence, not about what to build. When the task follows a plan or spec the user has approved:
 
-- An approved brief or spec decides what to build. Start the test list from its test plan and do not ask for approval of the list again. What it decided about the test setup and about commits replaces the defaults in this file. If it leaves a product or design decision open, ask instead of choosing; implementation details it does not mention are yours.
-- A code-quality skill decides style and scope; a project-structure skill decides where test files go when the project has no convention.
-- Give one final report: the shape under "Finishing", plus anything another skill asks you to report (trade-offs, things noticed but left out of scope).
+- Start the test list from the cases the plan gives, and do not ask for approval of the list again.
+- What the plan decided about the test setup and about commits replaces the defaults in this file.
+- If the plan leaves a product or design decision open, ask instead of choosing. Implementation details it does not mention are yours.
+- When the plan gives its steps in order, take them in that order, pick the starting point for each one separately (next section), and finish each at green before starting the next.
 
 ## Pick the starting point
 
@@ -40,8 +41,8 @@ All of them begin with Orient.
 
 ## 0. Orient (once per task)
 
-1. **Find the test setup.** Look for the framework, config and existing tests (`package.json` scripts, `pyproject.toml`, `pytest.ini`, `go.mod`, `Cargo.toml`, `Makefile`, CI config). Copy the project's conventions for file location, naming, fixtures and assertion style, so the new tests look like they belong.
-2. **If there is no test setup,** don't quietly pick a framework and add dependencies. If an approved brief or spec already decided this (which runner, or no setup at all), follow it. Otherwise prefer the runner built into the language (`unittest`, `go test`, `cargo test`, `node:test`). If a new dependency is needed, ask which one when the user is there to answer and there are real alternatives. Otherwise take the default for the project's stack and name it, with the reason, in the report. For trivial or small work in a project with no tests at all, do not introduce a test setup unasked: verify by running the code, say that no test was added, and offer to set one up.
+1. **Find the test setup.** Look for the framework, config and existing tests (`package.json` scripts, `pyproject.toml`, `pytest.ini`, `go.mod`, `Cargo.toml`, `Makefile`, CI config). Copy the project's conventions for file location, naming, fixtures and assertion style, so the new tests look like they belong. Where the project has no convention for where tests go, put them where the language's tooling looks for them by default.
+2. **If there is no test setup,** don't quietly pick a framework and add dependencies. If the user or an approved plan already decided this (which runner, or no setup at all), follow that. Otherwise prefer the runner built into the language (`unittest`, `go test`, `cargo test`, `node:test`). If a new dependency is needed, ask which one when the user is there to answer and there are real alternatives. Otherwise take the default for the project's stack and name it, with the reason, in the report. For trivial or small work in a project with no tests at all, do not introduce a test setup unasked: verify by running the code, say that no test was added, and offer to set one up.
 3. **Find the fastest test command**, one that runs a single test or file (`pytest path::test_name -x`, `npx vitest run file -t name`, `go test ./pkg -run TestName`, `cargo test name`). It will run dozens of times.
 4. **Get a baseline.** Run the existing suite once and note any tests that already fail, so they aren't confused with failures you cause. If the suite takes more than a couple of minutes, or the work is small, baseline only the packages you will touch and save the full run for the end.
 5. **If tests can't run at all** (missing dependencies, broken environment), stop and tell the user. Writing tests that never execute is guessing, not TDD.
@@ -54,7 +55,7 @@ All of them begin with Orient.
 
    Keep it somewhere that outlasts a long conversation (the task tracker if the environment has one, otherwise a notes file in a temp directory outside the source tree) and add to it whenever implementation reveals a new case.
 
-If a requirement is ambiguous in a way that is cheap to change later, write the test for the interpretation you chose and say so. The test records the decision. Ask instead when the work follows an approved brief or spec and the point is a product or design decision it does not cover, or when the choice is a product decision that would be expensive to reverse.
+If a requirement is ambiguous in a way that is cheap to change later, write the test for the interpretation you chose and say so. The test records the decision. Ask instead when the work follows an approved plan or spec and the point is a product or design decision it does not cover, or when the choice is a product decision that would be expensive to reverse.
 
 ## 1. RED: write one failing test
 
@@ -105,7 +106,7 @@ Putting the previous text back only works while you still have it exactly, which
 
 1. Write a test that **reproduces the bug** and fails, showing the wrong behavior. Write it at the lowest level that shows the bug; if it only appears when parts are combined, test at that level.
 2. Check that it fails *because of the bug* and not for another reason.
-3. If you can't reproduce it, stop before changing code and report what you tried. A fix for a bug you never saw fail is a guess: make one only if the user wants it, and label it as unverified. An approved bug report that says the bug was not reproduced, with a fix option the user picked, counts as the user wanting it. In that case first try to make a test fail at the level of the suspected defect; if it fails for the reason the report gives, that is the reproduction.
+3. If you can't reproduce it, stop before changing code and report what you tried. A fix for a bug you never saw fail is a guess: make one only if the user wants it, and label it as unverified. A user who was already told the bug could not be reproduced, and chose a fix anyway, counts as wanting it. In that case first try to make a test fail at the level of the suspected defect; if it fails for the suspected reason, that is the reproduction.
 4. Fix the code and watch the test go green.
 5. Ask **where else this bug could live.** Search for the same pattern and report what you find. Test and fix those places only when the request covers them or the user agrees; unrequested fixes elsewhere widen the change beyond what was asked.
 6. Keep the regression test and name it after the bug.
@@ -143,7 +144,7 @@ If you find a real bug while doing this, pin the current behavior anyway, note t
 1. Run the **full test suite**, plus the linter or type checker if the project has one. For small work with a slow suite, the related tests are enough; say that the full suite was not run.
 2. Compare against the baseline. Any new failure is yours to fix.
 3. If coverage is cheap to run, look at uncovered lines in the code you added.
-4. Don't commit unless the user asked or an approved brief says to. When committing, make commits at green points, tests and code together, and give a refactor or a file move its own commit, apart from behavior changes.
+4. Don't commit unless the user asked or an approved plan says to. When committing, make commits at green points, tests and code together, and give a refactor or a file move its own commit, apart from behavior changes.
 5. Report in this shape, keeping it short:
 
 ```
@@ -153,6 +154,8 @@ Bugs caught along the way: <what the tests found, or "none">
 Not handled: <edge cases left out and why, or "nothing">
 Run with: <exact command>
 ```
+
+   This is the testing part of the task's final report. If other instructions ask for more in that report, add it to the same one instead of writing a second.
 
 ## When to relax the loop
 

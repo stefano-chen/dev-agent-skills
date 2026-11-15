@@ -14,18 +14,10 @@ If the user gave text when invoking this skill, that text is the task.
 
 ## What wins when goals conflict
 
-1. **What the user and the project say.** Explicit instructions, the project's instruction files for coding agents (`AGENTS.md`, `CLAUDE.md` and the like), `CONTRIBUTING.md`, ADRs and architecture docs.
+1. **What the user and the project say.** Explicit instructions, the project's instruction files for coding agents (`AGENTS.md`, `CLAUDE.md` and the like), `CONTRIBUTING.md`, ADRs and architecture docs. What the user or a plan they approved has already decided (the stack, the root package name, where tests live) is settled: use it instead of asking or choosing again.
 2. **The structure the project already has.** A mediocre layout followed uniformly is easier to work in than a better one applied to half the code.
 3. **The ecosystem's conventions.** Build tools, frameworks and newcomers all expect them.
 4. **The principles below.**
-
-## With other skills
-
-This skill decides where code goes. When the task follows an approved brief or spec:
-
-- The paths it gives for new files are the planned placement. Check them against the project as in place mode. Where the project's pattern puts a file somewhere else, follow the pattern and report the difference. A new top-level directory or shared module that the brief did not name goes to the user before it is created.
-- Choices it already made (the stack, the root package name, where tests live, the test runner, whether to commit) are settled. Use them instead of asking or choosing again.
-- Give one final report for the whole task, not one per skill.
 
 ## Pick the mode
 
@@ -78,11 +70,13 @@ The aim is for new code to look as if the project's own authors had put it there
 
 Most of this is silent. A placement that follows the project's pattern needs no explanation. Tell the user only what they would want a say in: a new top-level directory or shared module, a split between two patterns, a placement that had no analogue, or a structural problem you worked around.
 
+When an approved plan names paths for new files, treat them as a forecast made before the code was written, not as an instruction. Check them against the project like any other placement, and where the project's pattern puts a file somewhere else, follow the pattern and report the difference.
+
 1. **Infer the structure before adding to it.** List the top-level directories, then find the nearest analogue of what you are adding (an existing endpoint, entity, component or job) and note where each of its parts lives, how the files are named, and where its tests are.
 2. **Follow that pattern**, even where you would have designed it differently. If the project mixes two patterns, match the module you are working in. Where that doesn't settle it, look for a migration under way (an ADR, recent commits moving code in one direction) and follow its direction; failing that, follow the most recent code. Mention the split to the user. Check that the analogue is typical before copying it: if its siblings are laid out differently, it is the outlier, and the siblings are the pattern.
 3. **Decide between a new file and an existing one.** New code goes into an existing file when it is part of that file's responsibility, and the analogue shows how much the project puts in one file. It gets a new file when it is a separate thing by the project's own granularity (a new endpoint where each endpoint has a file), or when adding it would give the existing file a second job. If the file you are editing has already outgrown its responsibility, adding the new part as its own file is fine; splitting up what is already there is restructuring, covered by step 6.
 4. **Without an analogue**, apply the principles in the least surprising way: the narrowest scope that works, beside its consumer, named like its neighbours.
-5. **Before creating a new top-level directory or a new shared module**, check whether an existing one is already meant for this. A new top-level entry changes the map everyone uses, so say that you are adding one and why.
+5. **Before creating a new top-level directory or a new shared module**, check whether an existing one is already meant for this. A new top-level entry changes the map everyone uses, so say that you are adding one and why. If the work follows an approved plan that did not name it, ask before creating it.
 6. **Don't restructure along the way.** If the existing structure is getting in the way of the task, finish the task within it and report the problem separately, with a suggestion. Moving files inside an unrelated change makes the diff hard to review, breaks other people's open branches, and is a decision that belongs to the user.
 7. **Check what the placement touches.** A new or moved file can need registering somewhere: a barrel or `__init__` re-export, a router or module registration, build or test globs, path-based ownership or CI rules. Look at how the analogue is wired in, do the same, then run the build and the tests. When the task itself is a move or rename, use the version-control move command and search for the old path in imports, configuration, docs and scripts.
 

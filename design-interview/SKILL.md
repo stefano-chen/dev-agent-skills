@@ -115,7 +115,7 @@ End with an **Implementation brief**. Implementation may happen in a fresh sessi
 - **Assumptions**: what you took from the codebase without asking
 - **Edge cases and handling**
 - **Data / schema changes**
-- **Affected files and components** (paths): the existing files to change, and the new files, marked as new. Choose where a new file goes by the project's own pattern (the layout and naming of its nearest analogue). If a project-structure skill is available, read it and use its rules for this, so the brief and the implementation agree on placement.
+- **Affected files and components** (paths): the existing files to change, and the new files, marked as new. Choose where a new file goes by the project's own pattern: the layout and naming of its nearest analogue.
 - **Build order**: the steps in the sequence you would take them. Each step is one of three kinds and never mixes them, because a step that changes structure and behavior together cannot show which of the two broke a test:
   - *Behavior*: adds one piece of observable behavior end to end, cut as a thin vertical slice where the work allows, and names the test-plan cases that prove it. New code with nothing testable of its own (a schema change, new wiring) is joined to the first behavior step that uses it.
   - *Structural*: a refactor, move or rename of existing code that a later step needs, with no change in behavior. It names the existing tests that must pass before and after, and it comes before the behavior step it makes room for.
@@ -185,12 +185,12 @@ A brief or report that exists only in the conversation is lost when the conversa
 
 ## After the user approves
 
-The brief or report is now the contract. It decides what gets built. Skills for test-driven development, code quality and project structure decide how: if they are available and you have not read them yet, read them before the first change. Their process and style rules apply, the brief's test plan is the starting test list, and its setup decisions (test setup, commits, layout) stand in place of the questions those skills would otherwise ask. Give one final report covering all of them.
+The brief or report is now the contract. It decides what gets built. How the code is written (style, testing technique, file layout) follows the project's conventions and whatever coding guidance the session provides, such as the project's instruction files: if some of it applies to this work and you have not read it yet, read it before the first change. Whatever that guidance says, the brief's test plan is the starting list of tests, and its setup decisions (test setup, commits, layout) are settled, so do not ask them again. Give one final report for the whole task.
 
 Two rules apply to every kind of work below:
 
-- **Open decisions.** If you meet a product or design decision the brief or report doesn't cover (behavior a user can observe, stored data or schema, a public interface, a new dependency, scope), stop and ask rather than choosing, even where another skill would have you pick an interpretation yourself. Then add the answer to the decisions log. Details an engineer settles without asking (a private name, the shape of a helper, internal structure) are yours: follow the codebase and the other skills. If nobody is there to answer (an unattended run), take the option that is easiest to reverse, continue, and list it as an assumption in the final report. Stop only when every option is expensive to reverse.
-- **File placement.** The paths the brief gives for new files are the planned placement, not a design decision. If the project-structure rules, or the code as you find it, put a file somewhere else, follow them and report the difference. A new top-level directory or shared module that the brief did not name goes back to the user first.
+- **Open decisions.** If you meet a product or design decision the brief or report doesn't cover (behavior a user can observe, stored data or schema, a public interface, a new dependency, scope), stop and ask rather than choosing, even where other guidance would have you pick an interpretation yourself. Then add the answer to the decisions log. Details an engineer settles without asking (a private name, the shape of a helper, internal structure) are yours: follow the codebase. If nobody is there to answer (an unattended run), take the option that is easiest to reverse, continue, and list it as an assumption in the final report. Stop only when every option is expensive to reverse.
+- **File placement.** The paths the brief gives for new files are the planned placement, not a design decision. If the project's own pattern, as you find it when you get there, puts a file somewhere else, follow the pattern and report the difference. A new top-level directory or shared module that the brief did not name goes back to the user first.
 
 Then, by kind of work:
 
