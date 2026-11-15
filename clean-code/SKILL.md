@@ -1,6 +1,6 @@
 ---
 name: clean-code
-description: "Standards for writing, changing, refactoring and reviewing code so it stays readable, minimal and consistent with the codebase it lives in. Use for any task that produces or changes code (implementing a feature, fixing a bug, refactoring, cleaning up, writing tests, reviewing a diff or pull request), even when the user never mentions code quality, and whenever the user asks for SOLID, DRY, KISS, YAGNI or "best practices". Not needed for questions that only ask to explain code, or for throwaway one-off commands."
+description: "Standards for writing, changing, refactoring and reviewing code so it stays readable, minimal and consistent with the codebase it lives in. Use for any task that produces or changes code (implementing a feature, fixing a bug, refactoring, cleaning up, writing tests, reviewing a diff or pull request), even when the user never mentions code quality, and whenever the user asks for SOLID, DRY, KISS, YAGNI or \"best practices\". Not needed for questions that only ask to explain code, or for throwaway one-off commands."
 ---
 
 # Clean Code
