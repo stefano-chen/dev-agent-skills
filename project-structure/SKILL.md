@@ -10,11 +10,11 @@ A project's structure is good when someone can guess where a piece of code lives
 
 The scope is where code lives: directories, modules, and files as units (what a file holds, what it is called, when it splits). How code is arranged inside a file is code style, not structure; there, match the neighbouring files.
 
-If text follows `/project-structure`, that text is the task.
+If the user gave text when invoking this skill, that text is the task.
 
 ## What wins when goals conflict
 
-1. **What the user and the project say.** Explicit instructions, `CLAUDE.md`, `CONTRIBUTING.md`, ADRs and architecture docs.
+1. **What the user and the project say.** Explicit instructions, the project's instruction files for coding agents (`AGENTS.md`, `CLAUDE.md` and the like), `CONTRIBUTING.md`, ADRs and architecture docs.
 2. **The structure the project already has.** A mediocre layout followed uniformly is easier to work in than a better one applied to half the code.
 3. **The ecosystem's conventions.** Build tools, frameworks and newcomers all expect them.
 4. **The principles below.**

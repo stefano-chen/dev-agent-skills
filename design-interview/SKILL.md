@@ -1,9 +1,8 @@
 ---
 name: design-interview
-description: "Pre-implementation workflow for a new feature or a bug fix. Explores the codebase, then interviews the user on design decisions (feature) or investigates the root cause (bug). Writes no code until the user approves."
+description: "Pre-implementation workflow for a new feature or a bug fix. Explores the codebase, then interviews the user on design decisions (feature) or investigates the root cause (bug). Writes no code until the user approves. Run it only when the user asks for it by name; do not start it on your own."
 argument-hint: "[feature or bug description]"
 disable-model-invocation: true
-model: claude-fable-5-2
 ---
 
 # Design Interview
@@ -17,7 +16,7 @@ A pre-implementation workflow. Its output is shared understanding, not code. The
 
 Approval means an explicit go-ahead on the finished brief or report. Answering an interview question, or agreeing with a recommendation along the way, is not approval to build.
 
-Request: `$ARGUMENTS`. If that is empty, or shows up as a literal placeholder, ask the user for it in one sentence.
+The request is whatever the user gave when they invoked this skill: the text that came with the invocation, or else the message that asked for it. If there is none, ask the user for it in one sentence.
 
 If the request points at a brief or report saved by an earlier run, do not start over. Read it, check that it still matches the code (the paths exist, the behavior it cites is unchanged), raise anything that has gone stale, then ask for the go-ahead and continue under "After the user approves".
 
@@ -45,7 +44,7 @@ Before asking anything, explore the parts of the codebase the feature will touch
 - Entry points, modules and data models involved
 - Existing patterns for similar features (follow the house style, don't invent one)
 - Config, feature flags, permissions, persistence/schema, APIs, UI components
-- Tests covering the area and how they are run (framework, command), or the fact that the project has no test setup
+- Tests covering the area and how they are run (framework, command), or the fact that the project has no test setup. Note which of the code the feature will change has no test covering it, because the build order needs to know.
 - Any docs/ADRs
 
 If there is no codebase yet (a new project, or a new package in a monorepo), there is little to explore. Look at what surrounds it (sibling packages, the repository's tooling and conventions), and expect the setup decisions in Step 3 to carry more of the interview.
@@ -84,7 +83,7 @@ Rules for every question:
    > **Q:** How should duplicate entries be handled?
    > **Recommended:** Reject with a validation error, matching how `UserService.create` handles conflicts.
    > Alternatives: silently merge; allow duplicates.
-4. **Ask in small batches** (1-3 related questions per turn), highest-impact decisions first. When the `AskUserQuestion` tool is available, use it for questions with a few distinct options, with the recommended option listed first and labeled "(Recommended)". The dialog can hide what you wrote before it, so each question must make sense on its own. Ask open-ended questions in plain text.
+4. **Ask in small batches** (1-3 related questions per turn), highest-impact decisions first. If the environment gives you a structured way to ask multiple-choice questions (a question dialog or form), use it for questions with a few distinct options, with the recommended option listed first and labeled "(Recommended)". Such a dialog can hide what you wrote before it, so each question must make sense on its own. Ask open-ended questions, and every question where there is no such dialog, in plain text.
 5. If the user answers "default" / "you pick" / doesn't care, take the recommendation and move on.
 6. **Flag conflicts instead of absorbing them.** If an answer contradicts the code, an earlier decision, or a constraint you found, say what it would break or cost and ask which one wins.
 7. Let answers reshape later questions: drop ones that became moot, add ones newly opened.
@@ -96,6 +95,16 @@ Rules for every question:
 
 Keep asking until an engineer could implement it without making a product or design decision on their own. Stop when every open item is either decided or explicitly deferred. Don't pad with low-value questions.
 
+Before you stop, draft the test plan and use it to find the decisions that are still missing. Implementation works through these cases one at a time, and a case whose expected result nobody decided comes back as a question in the middle of the build. For each behavior in scope, go through:
+
+- the happy path
+- edge cases: empty, zero, one, many, largest and smallest values, unicode, duplicates, ordering
+- invalid input and error paths
+- boundaries (`<` vs `<=`, first and last element)
+- state and interaction: called twice, concurrent calls, idempotency
+
+Keep the cases that apply. Where the expected result follows from a decision already made, or from how the codebase handles the same case, write it down. Where it does not, that is an interview question: ask it now, with a recommendation, under the rules of Step 3. For a small change this is a quick pass over a few cases, not a new round of questions.
+
 ### Step 5: Deliver the brief
 
 End with an **Implementation brief**. Implementation may happen in a fresh session, so write it for a reader who has not seen this conversation: full paths, no "as discussed above". Scale it to the task and leave out any section that has nothing in it.
@@ -106,13 +115,18 @@ End with an **Implementation brief**. Implementation may happen in a fresh sessi
 - **Assumptions**: what you took from the codebase without asking
 - **Edge cases and handling**
 - **Data / schema changes**
-- **Affected files and components** (paths): the existing files to change, and the new files, marked as new. Choose where a new file goes by the project's own pattern (the layout and naming of its nearest analogue). If a project-structure skill is available, load it and use its rules for this, so the brief and the implementation agree on placement.
-- **Build order**: the steps in the sequence you would take them, cut as thin vertical slices where the work allows. Each step adds one piece of observable behavior end to end and names the test-plan cases that prove it. A step with nothing testable of its own (a schema change, wiring) is joined to the first step that uses it. In work that changes no behavior, each step is one structural move that leaves the existing tests passing.
+- **Affected files and components** (paths): the existing files to change, and the new files, marked as new. Choose where a new file goes by the project's own pattern (the layout and naming of its nearest analogue). If a project-structure skill is available, read it and use its rules for this, so the brief and the implementation agree on placement.
+- **Build order**: the steps in the sequence you would take them. Each step is one of three kinds and never mixes them, because a step that changes structure and behavior together cannot show which of the two broke a test:
+  - *Behavior*: adds one piece of observable behavior end to end, cut as a thin vertical slice where the work allows, and names the test-plan cases that prove it. New code with nothing testable of its own (a schema change, new wiring) is joined to the first behavior step that uses it.
+  - *Structural*: a refactor, move or rename of existing code that a later step needs, with no change in behavior. It names the existing tests that must pass before and after, and it comes before the behavior step it makes room for.
+  - *Pin*: tests that record what existing code does today, added before a step that changes or restructures code no test covers. It names the behavior to pin. If the project has no test setup and none is being added, there is nothing to pin with: list the uncovered code under Risks instead.
+
+  In work that changes no behavior, every step is structural or pin.
 - **Acceptance criteria**: observable checks that show it is done
-- **Test plan**: the cases that must be covered
+- **Test plan**: the cases that must be covered, each with its expected result
 - **Implementation setup**: the test framework and command (or what was decided if the project has none), the commit policy, and for a new project or package the stack and layout choices
 - **Risks, open questions and deferred items**
-- **How to implement**: the rules under "After the user approves", copied in, so they reach a session that never loaded this skill
+- **How to implement**: the rules under "After the user approves", copied in, so they reach an agent that never read this skill
 
 Then ask two separate things, in this order: whether to save the brief as a markdown file (see "Saving the result"), and whether to proceed to implementation. A reply that clearly answers one settles only that one. If a reply could be answering either, it is not approval to build: ask. Do not start coding until the user says so.
 
@@ -167,11 +181,11 @@ A reply that could be answering either question is not approval to build: ask. D
 
 ## Saving the result
 
-A brief or report that exists only in the conversation is lost when the session ends or is cleared, and can be thinned by compaction. After delivering it, offer to save it as a markdown file where the repo keeps specs or design docs (ask where if there is no obvious place). This is the one file you may write before approval, and only when the user says yes.
+A brief or report that exists only in the conversation is lost when the conversation ends, and can be thinned when a long conversation is summarized. After delivering it, offer to save it as a markdown file where the repo keeps specs or design docs (ask where if there is no obvious place). This is the one file you may write before approval, and only when the user says yes.
 
 ## After the user approves
 
-The brief or report is now the contract. It decides what gets built. Skills for test-driven development, code quality and project structure decide how: if they are available in this session and not yet loaded, load them before the first change. Their process and style rules apply, the brief's test plan is the starting test list, and its setup decisions (test setup, commits, layout) stand in place of the questions those skills would otherwise ask. Give one final report covering all of them.
+The brief or report is now the contract. It decides what gets built. Skills for test-driven development, code quality and project structure decide how: if they are available and you have not read them yet, read them before the first change. Their process and style rules apply, the brief's test plan is the starting test list, and its setup decisions (test setup, commits, layout) stand in place of the questions those skills would otherwise ask. Give one final report covering all of them.
 
 Two rules apply to every kind of work below:
 
@@ -180,7 +194,7 @@ Two rules apply to every kind of work below:
 
 Then, by kind of work:
 
-- **Feature**: follow the build order one step at a time, each step with its tests.
+- **Feature**: follow the build order one step at a time, and finish each step, with the tests passing, before starting the next. A behavior step is done when its test-plan cases pass. A structural step is done when the tests it names pass with their assertions untouched. A pin step is done when its new tests pass against code that has not been changed yet. If a step turns out to need a structural change or a pin that the build order did not plan, do that first as a step of its own and say so in the final report.
 - **Bug**: write the regression test first and watch it fail, then make the fix, then confirm the test passes and the original reproduction no longer shows the symptom. Two cases change this:
   - *The bug was never reproduced.* Try to make a test fail at the level of the suspected defect. If it fails for the reason the report gives, that is the reproduction: continue as above. If nothing can be made to fail, the fix is a guess the user accepted when they picked it. Make it, keep the test as a guard for the expected behavior, and label the fix as unverified in the final report, with the observation that would confirm it.
   - *The project has no test setup.* Do what the report recommended, unless the user chose otherwise: add the runner it named and then the regression test, or verify the fix against the original reproduction and say in the final report that no regression test exists.

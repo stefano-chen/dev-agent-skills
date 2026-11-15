@@ -8,7 +8,7 @@ argument-hint: "[feature, bug or refactor to work on]"
 
 Work in small loops: write one test, watch it fail, write just enough code to pass, clean up. A test you saw fail before the code existed is evidence that the code works. A test written afterwards only shows that the test agrees with the code, bugs included. That difference is the whole reason for the order.
 
-If text follows `/tdd`, that text is the task.
+If the user gave text when invoking this skill, that text is the task.
 
 ## Size the work first
 
@@ -17,7 +17,7 @@ Match the ceremony to the change. Applying every section below to a one-line fix
 - **Trivial** (typo, message text, comment, rename: no logic changes): no new test. Run the related tests and stop.
 - **Small** (a one-line bug fix, a single function): one or two tests, the loop, run the related tests, report in a line or two. Skip the test list and the bug-hunting section, and baseline only the related tests. A one-line bug fix still gets its regression test.
 - **Medium** (a feature inside one module): the full loop with a test list.
-- **Large** (crosses modules, or the requirements are fuzzy): write the test list first. In an interactive session, show it to the user and wait for their go-ahead before coding. In an unattended run, or when the list comes from a plan the user already approved, put it in the report and continue. Build one thin end-to-end slice at a time. When an approved brief gives a build order, its steps are the slices, in its order.
+- **Large** (crosses modules, or the requirements are fuzzy): write the test list first. In an interactive session, show it to the user and wait for their go-ahead before coding. In an unattended run, or when the list comes from a plan the user already approved, put it in the report and continue. Build one thin end-to-end slice at a time. When an approved brief gives a build order, its steps are the slices, in its order. A step that adds behavior runs the loop. A step that only changes structure follows "Refactoring existing code". A step that pins existing behavior follows "Changing code that has no tests". Finish each step at green before starting the next.
 
 ## With other skills
 
@@ -52,7 +52,7 @@ All of them begin with Orient.
    - boundaries (`<` vs `<=`, first and last element)
    - state and interaction cases (called twice, concurrent calls, idempotency) where relevant
 
-   Keep it in the task list and add to it whenever implementation reveals a new case.
+   Keep it somewhere that outlasts a long conversation (the task tracker if the environment has one, otherwise a notes file in a temp directory outside the source tree) and add to it whenever implementation reveals a new case.
 
 If a requirement is ambiguous in a way that is cheap to change later, write the test for the interpretation you chose and say so. The test records the decision. Ask instead when the work follows an approved brief or spec and the point is a product or design decision it does not cover, or when the choice is a product decision that would be expensive to reverse.
 

@@ -9,7 +9,7 @@ Clean code is code the next reader can understand, change and trust quickly. You
 
 ## What wins when goals conflict
 
-1. **What the user and the project say.** Explicit instructions, `CLAUDE.md`, `CONTRIBUTING.md` and linter/formatter configs override the choices below.
+1. **What the user and the project say.** Explicit instructions, the project's instruction files for coding agents (`AGENTS.md`, `CLAUDE.md` and the like), `CONTRIBUTING.md` and linter/formatter configs override the choices below.
 2. **Correctness.** Clean code that does the wrong thing is worthless.
 3. **Consistency with the surrounding code.** A "better" pattern used in one file makes the codebase harder to read, not easier. Match what is there (naming, layout, error mechanism, test style), even where this skill would choose differently, and mention the disagreement instead of acting on it.
 4. **Simplicity.** The least code and the fewest concepts that fully solve the problem.
