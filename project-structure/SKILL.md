@@ -19,6 +19,14 @@ If text follows `/project-structure`, that text is the task.
 3. **The ecosystem's conventions.** Build tools, frameworks and newcomers all expect them.
 4. **The principles below.**
 
+## With other skills
+
+This skill decides where code goes. When the task follows an approved brief or spec:
+
+- The paths it gives for new files are the planned placement. Check them against the project as in place mode. Where the project's pattern puts a file somewhere else, follow the pattern and report the difference. A new top-level directory or shared module that the brief did not name goes to the user before it is created.
+- Choices it already made (the stack, the root package name, where tests live, the test runner, whether to commit) are settled. Use them instead of asking or choosing again.
+- Give one final report for the whole task, not one per skill.
+
 ## Pick the mode
 
 - **Scaffold**: there is no project yet, or a new deployable/package is being added to a monorepo.
@@ -83,7 +91,7 @@ Most of this is silent. A placement that follows the project's pattern needs no 
 The user has already decided what moves, so do not turn the request into an audit or wait for a second approval.
 
 1. Settle only what the request leaves open (the new name, the exact destination, where a split falls), using the nearest analogue as in place mode. Ask only if the options differ in a way the user would care about.
-2. Carry it out with the version-control move command so history follows, keep the move separate from behavior changes, and do the wiring check from place mode step 7: registrations, re-exports, globs, and every reference to the old path in imports, configuration, docs and scripts. Run the build and the tests.
+2. Carry it out with the version-control move command so history follows, and keep the move separate from behavior changes: its own commit when you are committing, otherwise finished, with the build and tests passing, before any behavior change starts. Do the wiring check from place mode step 7: registrations, re-exports, globs, and every reference to the old path in imports, configuration, docs and scripts. Run the build and the tests.
 3. Keep to what was asked. Other structural problems you notice go in the report as suggestions.
 
 ## Audit mode
@@ -92,6 +100,6 @@ The user has already decided what moves, so do not turn the request into an audi
 2. **Find what the structure is costing.** Evidence is better than taste, and it comes from version control (`git log --name-only` shows which files change together and which change in most commits) and from the stack's dependency and lint tooling, more than from reading the tree. Look for: recent commits that each touch many directories, import cycles, a module everything depends on, junk-drawer directories that keep growing, the same concept in several places, deep nesting, directories with one file, files that hold several unrelated things and show up in most commits, features shredded into many few-line files, entry points full of logic, generated code edited by hand or mixed in with hand-written code, deviations from the ecosystem layout that tooling has to be configured around.
 3. **Report**, most costly first. For each finding: what it is (with paths), what it costs, and the suggested change. Say what is working well too, so it survives the reorganization. Keep clear which findings are problems and which are only preferences, and leave preferences out unless asked.
 4. **Propose an incremental migration**, not a rewrite: small steps that each leave the build and tests passing, in an order where the early steps are useful even if the later ones never happen. Note what each step touches outside the source tree (imports, build config, CI paths, docs, deployment manifests).
-5. **Change nothing until the user picks what to do.** When executing, move files with the version-control move command so history follows, keep moves separate from behavior changes, and run the build and tests after each step.
+5. **Change nothing until the user picks what to do.** When executing, move files with the version-control move command so history follows, keep moves separate from behavior changes (separate commits when you are committing), and run the build and tests after each step.
 
 Judge the structure against the project's actual size and team. A flat layout in a 15-file service is not a finding.

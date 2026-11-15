@@ -45,7 +45,10 @@ Before asking anything, explore the parts of the codebase the feature will touch
 - Entry points, modules and data models involved
 - Existing patterns for similar features (follow the house style, don't invent one)
 - Config, feature flags, permissions, persistence/schema, APIs, UI components
-- Tests covering the area, and any docs/ADRs
+- Tests covering the area and how they are run (framework, command), or the fact that the project has no test setup
+- Any docs/ADRs
+
+If there is no codebase yet (a new project, or a new package in a monorepo), there is little to explore. Look at what surrounds it (sibling packages, the repository's tooling and conventions), and expect the setup decisions in Step 3 to carry more of the interview.
 
 Write a short **Context summary** for the user: what exists today, where the feature would plug in, and the constraints you found. Cite file paths. Three bullets is fine for a small change; stay under ten.
 
@@ -68,6 +71,10 @@ Ask only about **decisions that affect the design**. Cover, as relevant:
 - **Data**: new fields/tables, migrations, validation, defaults, retention, source of truth
 - **UX**: where it appears, states (loading/empty/error), copy, accessibility
 - **Tradeoffs**: performance vs. simplicity, build vs. reuse, flexibility vs. YAGNI, rollout strategy
+- **Setup for the implementation**, only where it applies and the project has not already settled it. These are decisions the implementation would otherwise have to stop for, or make on its own:
+  - *No test setup*: add one (and which runner), or verify by running the code. For a small change, recommend not adding one.
+  - *New project or package*: the stack, the root package or module name, where tests live, how configuration and secrets are loaded, single package or workspace.
+  - *Commits*: whether to commit during implementation, and at which points. Ask when the work has several steps, or mixes a move or refactor with a behavior change, because those are worth separate commits. Otherwise the default is no commits unless the user asks for them.
 
 Rules for every question:
 
@@ -99,10 +106,11 @@ End with an **Implementation brief**. Implementation may happen in a fresh sessi
 - **Assumptions**: what you took from the codebase without asking
 - **Edge cases and handling**
 - **Data / schema changes**
-- **Affected files and components** (paths)
-- **Build order**: the steps in the sequence you would take them
+- **Affected files and components** (paths): the existing files to change, and the new files, marked as new. Choose where a new file goes by the project's own pattern (the layout and naming of its nearest analogue). If a project-structure skill is available, load it and use its rules for this, so the brief and the implementation agree on placement.
+- **Build order**: the steps in the sequence you would take them, cut as thin vertical slices where the work allows. Each step adds one piece of observable behavior end to end and names the test-plan cases that prove it. A step with nothing testable of its own (a schema change, wiring) is joined to the first step that uses it. In work that changes no behavior, each step is one structural move that leaves the existing tests passing.
 - **Acceptance criteria**: observable checks that show it is done
 - **Test plan**: the cases that must be covered
+- **Implementation setup**: the test framework and command (or what was decided if the project has none), the commit policy, and for a new project or package the stack and layout choices
 - **Risks, open questions and deferred items**
 - **How to implement**: the rules under "After the user approves", copied in, so they reach a session that never loaded this skill
 
@@ -117,6 +125,7 @@ Then ask two separate things, in this order: whether to save the brief as a mark
 - Find the code path behind the reported behavior.
 - Try to reproduce: run the relevant tests or the program. If you need a script to exercise existing code, put it in a temp directory outside the source tree. It must only call existing code, never patch it. Keep it until the fix has been verified against it, or until the user decides not to proceed, then remove it. Include its content or the exact commands in the report so the reproduction can be rebuilt in another session.
 - Check logs and recent changes in the area (`git log`, `git blame`).
+- Note how the project's tests are run, or that it has no test setup. The regression test depends on it.
 - Record what you ran and what you observed.
 
 ### Step 2: Find the root cause, not the symptom
@@ -141,13 +150,18 @@ If blocked, ask for information that isn't in the code or logs: exact repro step
 - **Why tests missed it**: the gap in coverage
 - **Blast radius**: other code affected by the same cause or pattern
 - **Fix options**: 1-3 approaches with tradeoffs and a recommendation (described, not written)
-- **Regression test**: the case to add (described, not written)
+- **Regression test**: the case to add (described, not written). If the project has no test setup, say so and recommend one of two paths: add a setup (name the runner) and the test, or verify the fix against the reproduction only. For a small fix, recommend the second.
 - **Confidence**: high / medium / low, and what would raise it. If you never reproduced the bug, confidence is medium at most.
 - **How to implement**: the rules under "After the user approves", copied in
 
 If the evidence did not single out one cause, say so at the top. **Root cause** becomes the ranked candidates, and **Fix options** becomes the next diagnostic step: what to observe, what that needs (temporary logging, access to data or an environment), and what each outcome would mean. Ask for the go-ahead on that step, not on a fix.
 
-Then ask two separate things, in this order: whether to save the report (see "Saving the result"), and which fix option to proceed with, if any. A reply that could be answering either is not approval to build: ask. Do not write the fix until the user says so.
+Then ask two separate things, in this order: whether to save the report (see "Saving the result"), and which fix option to proceed with, if any. Add two things to the second question when they apply:
+
+- If **Blast radius** lists other sites, ask whether the fix should cover them too. The default is the reported bug only, with the rest left as follow-ups.
+- If the bug was never reproduced, say that the fix cannot be shown to work until it is, so that picking an option is an informed choice of an unverified fix.
+
+A reply that could be answering either question is not approval to build: ask. Do not write the fix until the user says so.
 
 ---
 
@@ -157,8 +171,18 @@ A brief or report that exists only in the conversation is lost when the session 
 
 ## After the user approves
 
-The brief or report is now the contract. It decides what gets built. Other skills active during implementation (test-driven development, code quality, project structure) decide how: their process and style rules apply, the brief's test plan is the starting test list, and where they would have you pick an interpretation yourself, the first rule below wins. Give one final report covering all of them.
+The brief or report is now the contract. It decides what gets built. Skills for test-driven development, code quality and project structure decide how: if they are available in this session and not yet loaded, load them before the first change. Their process and style rules apply, the brief's test plan is the starting test list, and its setup decisions (test setup, commits, layout) stand in place of the questions those skills would otherwise ask. Give one final report covering all of them.
 
-- **Feature**: follow the build order. If you meet a decision the brief doesn't cover, stop and ask rather than choosing; then add the answer to the decisions log.
-- **Bug**: write the regression test first and watch it fail, then make the fix, then confirm the test passes and the original reproduction no longer shows the symptom.
-- Finish by running the test plan and checking each acceptance criterion (or each point of the report) against what you observed, not against what the code should do. Tell the user anything that deviated, and anything you could not verify, and why.
+Two rules apply to every kind of work below:
+
+- **Open decisions.** If you meet a product or design decision the brief or report doesn't cover (behavior a user can observe, stored data or schema, a public interface, a new dependency, scope), stop and ask rather than choosing, even where another skill would have you pick an interpretation yourself. Then add the answer to the decisions log. Details an engineer settles without asking (a private name, the shape of a helper, internal structure) are yours: follow the codebase and the other skills. If nobody is there to answer (an unattended run), take the option that is easiest to reverse, continue, and list it as an assumption in the final report. Stop only when every option is expensive to reverse.
+- **File placement.** The paths the brief gives for new files are the planned placement, not a design decision. If the project-structure rules, or the code as you find it, put a file somewhere else, follow them and report the difference. A new top-level directory or shared module that the brief did not name goes back to the user first.
+
+Then, by kind of work:
+
+- **Feature**: follow the build order one step at a time, each step with its tests.
+- **Bug**: write the regression test first and watch it fail, then make the fix, then confirm the test passes and the original reproduction no longer shows the symptom. Two cases change this:
+  - *The bug was never reproduced.* Try to make a test fail at the level of the suspected defect. If it fails for the reason the report gives, that is the reproduction: continue as above. If nothing can be made to fail, the fix is a guess the user accepted when they picked it. Make it, keep the test as a guard for the expected behavior, and label the fix as unverified in the final report, with the observation that would confirm it.
+  - *The project has no test setup.* Do what the report recommended, unless the user chose otherwise: add the runner it named and then the regression test, or verify the fix against the original reproduction and say in the final report that no regression test exists.
+- **Diagnostic step** (the report could not single out a cause, and the user approved its next step): do that step and nothing else. Anything it adds to the source tree (a log line, a probe) is temporary. Remove all of it once the observation is made, and check the diff to confirm nothing is left. If it has to stay in place to collect evidence (logging that must be deployed), say so and list exactly what to remove later. Then go back to bug mode Step 2 with the new evidence and deliver an updated report. The approval covered the diagnosis; a fix needs its own.
+- After a feature or a fix, finish by running the test plan and checking each acceptance criterion (or each point of the report) against what you observed, not against what the code should do. Tell the user anything that deviated, and anything you could not verify, and why.
