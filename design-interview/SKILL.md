@@ -68,6 +68,7 @@ Ask only about **decisions that affect the design**. Cover, as relevant:
 - **Behavior**: what exactly happens, triggers, inputs/outputs, scope (what is explicitly out)
 - **Edge cases**: empty/invalid input, concurrency, failures, limits, permissions, backwards compatibility
 - **Data**: new fields/tables, migrations, validation, defaults, retention, source of truth
+- **Side effects**: what the feature causes beyond its direct output (calls to external services, emails or notifications, emitted events or webhooks, cache invalidation, audit logs or metrics, writes to state other code reads), and what happens to each on retry, partial failure or rollback
 - **UX**: where it appears, states (loading/empty/error), copy, accessibility
 - **Tradeoffs**: performance vs. simplicity, build vs. reuse, flexibility vs. YAGNI, rollout strategy
 - **Setup for the implementation**, only where it applies and the project has not already settled it. These are decisions the implementation would otherwise have to stop for, or make on its own:
@@ -102,6 +103,7 @@ Before you stop, draft the test plan and use it to find the decisions that are s
 - invalid input and error paths
 - boundaries (`<` vs `<=`, first and last element)
 - state and interaction: called twice, concurrent calls, idempotency
+- side effects: each fires exactly when intended, not on a failed or rolled-back operation, and not twice on a retry
 
 Keep the cases that apply. Where the expected result follows from a decision already made, or from how the codebase handles the same case, write it down. Where it does not, that is an interview question: ask it now, with a recommendation, under the rules of Step 3. For a small change this is a quick pass over a few cases, not a new round of questions.
 
@@ -115,6 +117,7 @@ End with an **Implementation brief**. Implementation may happen in a fresh sessi
 - **Assumptions**: what you took from the codebase without asking
 - **Edge cases and handling**
 - **Data / schema changes**
+- **Side effects**: each one, when it fires, and how it behaves on retry, failure or rollback
 - **Affected files and components** (paths): the existing files to change, and the new files, marked as new. Choose where a new file goes by the project's own pattern: the layout and naming of its nearest analogue.
 - **Build order**: the steps in the sequence you would take them. Each step is one of three kinds and never mixes them, because a step that changes structure and behavior together cannot show which of the two broke a test:
   - *Behavior*: adds one piece of observable behavior end to end, cut as a thin vertical slice where the work allows, and names the test-plan cases that prove it. New code with nothing testable of its own (a schema change, new wiring) is joined to the first behavior step that uses it.
