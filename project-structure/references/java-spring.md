@@ -28,28 +28,40 @@ my-service/
 - The root package is `<reversed domain>.<application>`, all lowercase, no underscores. It is expensive to change later.
 - Start from Spring Initializr (start.spring.io or the IDE integration) for new projects.
 
-## Package by feature
+## Package by feature, layered inside
+
+Top-level packages are features. Inside each feature, classes are split into layer sub-packages, and the classes are `public`:
 
 ```
 com.acme.shop.order/
-├── OrderController.java        # public only if something outside needs it
-├── OrderService.java
-├── OrderRepository.java
-├── Order.java
-├── OrderStatus.java
-├── CreateOrderRequest.java     # DTOs live with the feature that owns them
-└── OrderNotFoundException.java
+├── controller/
+│   └── OrderController.java
+├── service/
+│   └── OrderService.java
+├── repository/
+│   └── OrderRepository.java
+├── model/
+│   ├── Order.java
+│   └── OrderStatus.java
+├── dto/
+│   ├── CreateOrderRequest.java      # DTOs live with the feature that owns them
+│   └── OrderResponse.java
+└── exception/
+    └── OrderNotFoundException.java
 ```
 
-Java's package-private visibility is the reason this works well: with one feature per package, everything except the feature's intended API can drop the `public` modifier, and the compiler enforces the boundary. A layered layout (`controller/`, `service/`, `repository/`, `model/`) forces nearly every class to be public, so nothing stops any class from calling any other.
+This is the user's standing preference, and it holds at any size:
 
-When a feature grows past roughly ten to fifteen classes, split it by sub-feature first. If it needs internal layers instead, use sub-packages (`order.web`, `order.domain`, `order.persistence`), accepting that classes crossing those sub-packages must become public.
+- **Layer sub-packages from the first class.** Don't wait for a feature to reach some number of files, and don't flag layer sub-packages with one or two files as a problem. Create only the layers the feature actually has; a feature with no persistence has no `repository/`.
+- **No package-private classes.** Don't use package-private visibility to hide classes inside a feature package. Classes are `public` and live in the layer sub-package for their role. Boundaries come from the dependency rules below and, where they need enforcing, from ArchUnit.
+- **Sub-package names:** `controller`, `service`, `repository`, `model` (entities, enums, value types), `dto` (request and response records), `exception`. Where the project already uses other layer names (`web`, `domain`, `persistence`), use those instead.
+- **A feature that grows large** is split by sub-feature (`order.checkout`, `order.refund`), and each sub-feature is layered the same way.
 
-Many existing Spring codebases are layered. In place mode, follow the layering that is there; don't start a feature package in the middle of a layered project.
+Many existing Spring codebases are layered at the top level (`controller/`, `service/` across all features). In place mode, follow the layering that is there; don't start a feature package in the middle of a layered project. In a project whose feature packages are flat, new features still get layer sub-packages, because the user's preference outranks the existing layout. Leave the existing flat features alone unless the task is restructuring them, and mention the difference.
 
 ## Files
 
-- One top-level type per file, named for the type. The compiler requires this for public types; apply it to package-private ones too, so that a class can be found by its file name.
+- One top-level type per file, named for the type, so that a class can be found by its file name.
 - Small types that exist only for one class (a builder, a private record, the permitted records of a sealed interface) are nested in that class's file. Once another class uses the type, it gets its own file.
 - Class names carry the feature and the role (`OrderController`, `OrderService`, `CreateOrderRequest`), matching the suffixes the project already uses. A class that needs `Manager`, `Helper` or `Util` in its name usually has no single responsibility yet.
 - A service that keeps growing is split by use case or sub-feature (`OrderCheckoutService`, `OrderRefundService`), not into `OrderService2` or a static helper class.
@@ -68,15 +80,15 @@ Bind configuration with `@ConfigurationProperties` records placed beside the cod
 
 ## Dependency direction
 
-- Controllers depend on services, services on repositories and domain types. Domain types don't depend on web or persistence DTOs.
+- Within a feature: `controller` depends on `service` and `dto`; `service` on `repository`, `model` and `exception`; `repository` on `model`. `model` depends on no other layer. Controllers never call repositories directly.
 - Features call each other through a service or a small facade, not through each other's repositories or entities. Where features only need to react to each other, application events avoid a direct dependency.
-- Enforcement options, lightest first: package-private visibility; ArchUnit tests (layer rules, no cycles); Spring Modulith, which treats each top-level package as a module, verifies that modules only use each other's exposed API, and can generate module documentation.
+- Since classes are public, the compiler does not enforce these rules. When they need enforcing, use ArchUnit tests (layer rules such as `layeredArchitecture()`, no cycles), or Spring Modulith, which treats each top-level package as a module, verifies that modules only use each other's exposed API, and can generate module documentation.
 
 ## Tests
 
-- `src/test/java` mirrors the main package structure, so tests can see package-private classes.
+- `src/test/java` mirrors the main package structure, layer sub-packages included (`order/controller/OrderControllerTest.java`).
 - Name unit tests `*Test`, run by Surefire. Name integration tests `*IT`, run by Failsafe in the `verify` phase, or give them their own source set in Gradle. Follow whichever split the project already uses.
-- Prefer slice tests (`@WebMvcTest`, `@DataJpaTest`) placed in the feature's package over full `@SpringBootTest` contexts for everything.
+- Prefer slice tests (`@WebMvcTest`, `@DataJpaTest`) placed in the layer sub-package they test over full `@SpringBootTest` contexts for everything.
 - Shared fixtures and test configuration go under `src/test/java` in a clearly named package, and test data under `src/test/resources`.
 
 ## Resources and configuration
@@ -105,7 +117,7 @@ Prefer modules cut by feature or bounded context. Modules cut by layer (`-web`, 
 ## Common problems to look for in an audit
 
 - Application class not in the root package, compensated with explicit `scanBasePackages`.
-- Layered packages where every class is public and services call each other's repositories freely.
+- Services calling other features' repositories, or controllers calling repositories directly. (Public classes and small layer sub-packages are the house style, not findings.)
 - A `util` or `common` package holding unrelated helpers, or domain logic in static utility classes.
 - Entities used directly as request and response bodies across features.
 - Cycles between packages (ArchUnit's `slices().should().beFreeOfCycles()` finds them).
