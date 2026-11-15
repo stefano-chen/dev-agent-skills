@@ -29,7 +29,7 @@ my-app/
     │       ├── actions.ts        # server actions ("use server")
     │       ├── queries.ts        # server-side data access
     │       ├── schemas.ts        # validation schemas and derived types
-    │       └── index.ts          # optional: the feature's public surface
+    │       └── index.ts          # optional: re-exports the feature's shared components and types
     ├── components/
     │   └── ui/                   # shared, feature-agnostic primitives
     ├── lib/                      # infrastructure clients: db, auth, logger
@@ -46,7 +46,7 @@ Inside `app/`, a folder becomes a route only when it contains `page.tsx` or `rou
 
 - `page.tsx` and `layout.tsx` fetch data, compose feature components and export metadata. Business logic and large component trees live in `features/`.
 - Route groups `(name)/` organize routes and share layouts without affecting the URL.
-- Private folders `_name/` are excluded from routing. Use them for components used by exactly one route, colocated with it.
+- Private folders `_name/` are excluded from routing. Use them for pieces that are tied to exactly one route and have no meaning outside it (a page-specific layout section), colocated with it. A component that belongs to a product area goes in that feature, even if only one route uses it today.
 - Use the special files (`loading`, `error`, `not-found`, `template`, `default`) for what they are for, in preference to hand-rolled equivalents.
 
 Next.js supports three placements for non-route code: everything outside `app/`, top-level folders inside `app/`, or split per route. The layout above combines the first with route-level colocation for single-use pieces. Any of them is acceptable if applied consistently; follow what the project does.
@@ -59,7 +59,7 @@ A feature directory holds everything for one area of the product. Start it flat 
 - Features import from `components/`, `lib/` and, sparingly, from other features' public surface. `components/ui` and `lib/` never import from `features/`, and nothing imports from `app/`.
 - `lib/` is conventional in Next.js projects and is the usual junk drawer. Keep it to infrastructure setup with one clearly named file or folder per concern (`lib/db.ts`, `lib/auth.ts`). Domain logic belongs in a feature.
 
-**Barrel files.** One small `index.ts` per feature, re-exporting its public surface, is a reasonable boundary. Barrels at every level are not: they create import cycles, slow down tooling, and can pull server-only code into client bundles. Don't re-export client and server modules from the same barrel.
+**Barrel files.** One small `index.ts` per feature, re-exporting the components and types other features may use, is a reasonable boundary. Barrels at every level are not: they create import cycles, slow down tooling, and can pull server-only code into client bundles. Don't re-export client and server modules from the same barrel. A feature's server modules (`actions.ts`, `queries.ts`) therefore stay out of `index.ts` and are imported by their own path (`@/features/orders/queries`); those role files, together with `index.ts`, are the feature's public surface, and everything else in the feature is internal.
 
 **Enforcing boundaries.** ESLint `no-restricted-imports` patterns, `eslint-plugin-boundaries`, or dependency-cruiser can forbid deep imports into another feature and imports in the wrong direction.
 
@@ -87,6 +87,7 @@ The server/client split is part of the structure, because a misplaced file chang
 - Unit and component tests are colocated: `order-summary.test.tsx` beside `order-summary.tsx`. Some projects use `__tests__/` folders instead; follow what is there.
 - End-to-end tests live in a top-level `e2e/` (or `tests/`) directory with their own configuration.
 - Shared test utilities and mocks go in one named place such as `src/test/`.
+- `create-next-app` sets up no test runner. In an existing project use the one that is there. In a new one, Vitest (or Jest) with Testing Library for unit and component tests and Playwright for end-to-end are the usual choices; say which you added.
 
 ## Pages Router and plain TypeScript
 

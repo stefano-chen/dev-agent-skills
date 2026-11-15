@@ -14,9 +14,18 @@ If text follows `/tdd`, that text is the task.
 
 Match the ceremony to the change. Applying every section below to a one-line fix wastes the user's time; skipping the test list on a large feature loses cases.
 
-- **Small** (one-line fix, a single function): one or two tests, the loop, run the related tests, report in a line or two. Skip the test list and the bug-hunting section, and baseline only the related tests.
+- **Trivial** (typo, message text, comment, rename: no logic changes): no new test. Run the related tests and stop.
+- **Small** (a one-line bug fix, a single function): one or two tests, the loop, run the related tests, report in a line or two. Skip the test list and the bug-hunting section, and baseline only the related tests. A one-line bug fix still gets its regression test.
 - **Medium** (a feature inside one module): the full loop with a test list.
-- **Large** (crosses modules, or the requirements are fuzzy): write the test list first and show it to the user before coding if they are around. Build one thin end-to-end slice at a time.
+- **Large** (crosses modules, or the requirements are fuzzy): write the test list first. In an interactive session, show it to the user and wait for their go-ahead before coding. In an unattended run, or when the list comes from a plan the user already approved, put it in the report and continue. Build one thin end-to-end slice at a time.
+
+## With other skills
+
+This skill is about the order of work and the evidence. When other skills are active for the same task:
+
+- An approved brief or spec decides what to build. Start the test list from its test plan and do not ask for approval of the list again. If it leaves a decision open, ask instead of choosing.
+- A code-quality skill decides style and scope; a project-structure skill decides where test files go when the project has no convention.
+- Give one final report: the shape under "Finishing", plus anything another skill asks you to report (trade-offs, things noticed but left out of scope).
 
 ## Pick the starting point
 
@@ -32,7 +41,7 @@ All of them begin with Orient.
 ## 0. Orient (once per task)
 
 1. **Find the test setup.** Look for the framework, config and existing tests (`package.json` scripts, `pyproject.toml`, `pytest.ini`, `go.mod`, `Cargo.toml`, `Makefile`, CI config). Copy the project's conventions for file location, naming, fixtures and assertion style, so the new tests look like they belong.
-2. **If there is no test setup,** don't quietly pick a framework and add dependencies. Prefer the runner built into the language (`unittest`, `go test`, `cargo test`, `node:test`). If a new dependency is needed, name it in one line and why, then carry on unless the user objects.
+2. **If there is no test setup,** don't quietly pick a framework and add dependencies. Prefer the runner built into the language (`unittest`, `go test`, `cargo test`, `node:test`). If a new dependency is needed, ask which one when the user is there to answer and there are real alternatives. Otherwise take the default for the project's stack and name it, with the reason, in the report. For trivial or small work in a project with no tests at all, do not introduce a test setup unasked: verify by running the code, say that no test was added, and offer to set one up.
 3. **Find the fastest test command**, one that runs a single test or file (`pytest path::test_name -x`, `npx vitest run file -t name`, `go test ./pkg -run TestName`, `cargo test name`). It will run dozens of times.
 4. **Get a baseline.** Run the existing suite once and note any tests that already fail, so they aren't confused with failures you cause. If the suite takes more than a couple of minutes, or the work is small, baseline only the packages you will touch and save the full run for the end.
 5. **If tests can't run at all** (missing dependencies, broken environment), stop and tell the user. Writing tests that never execute is guessing, not TDD.
@@ -45,7 +54,7 @@ All of them begin with Orient.
 
    Keep it in the task list and add to it whenever implementation reveals a new case.
 
-If a requirement is ambiguous, write the test for the interpretation you chose and say so. The test records the decision.
+If a requirement is ambiguous in a way that is cheap to change later, write the test for the interpretation you chose and say so. The test records the decision. Ask instead when the work follows an approved brief or spec that does not cover the point, or when the choice is a product decision that would be expensive to reverse.
 
 ## 1. RED: write one failing test
 
@@ -54,9 +63,9 @@ If a requirement is ambiguous, write the test for the interpretation you chose a
 - Assert on observable behavior (outputs, returned errors, state through the public API), not internals. Tests tied to internals break on every refactor and stop being trusted.
 - Use specific expected values (`assert total == 42.50`), not "truthy" or "no exception".
 - Test at the lowest level that shows the behavior through a public interface, because fast tests keep the loop short. Go up a level (integration, end to end) only when the behavior exists only once the parts are combined.
-- **Run it and confirm it fails for the right reason:** the assertion, or "not implemented". A typo, import error or broken fixture is the wrong reason; fix the test first.
-- In compiled or typed languages a missing symbol is a build error, which hides whether the assertion works. Add the smallest stub (returns a zero value or throws "not implemented") so the test compiles and fails on its assertion.
-- **If it passes right away, stop.** Either the behavior already exists or the test isn't testing what you think. Find out which by briefly breaking the code the test should depend on. If the test goes red, the behavior was already there: restore the code, keep the test if it adds coverage, and move to the next item. If it stays green, the test is wrong; fix it.
+- **Run it and confirm it fails for the right reason:** the assertion, or "not implemented". A typo, a broken fixture or a failed import of something that should exist is the wrong reason; fix the test first.
+- When the function, class or module under test does not exist yet, in any language, add the smallest stub first (returns a zero value or throws "not implemented") so the test file loads and the test fails on its assertion. A missing symbol is a build error in compiled languages and an import error in dynamic ones; either way it hides whether the assertion works, and in dynamic languages it also takes down every other test in the file.
+- **If it passes right away, stop.** Either the behavior already exists or the test isn't testing what you think. Find out which by briefly breaking the code the test should depend on. If the test goes red, the behavior was already there: restore the code (see "Undoing"), keep the test if it adds coverage, and move to the next item. If it stays green, the test is wrong; fix it.
 
 ## 2. GREEN: make it pass with minimal code
 
@@ -73,6 +82,8 @@ If a requirement is ambiguous, write the test for the interpretation you chose a
 
 Then return to RED with the next item.
 
+**Undoing.** "Go back to the last green state", "undo the last change" and "restore the code" all mean reversing your own edits from this step, by putting the previous text back. Do not use `git checkout`, `git restore`, `git reset` or `git stash` for this. Unless you have been committing at green points, they would also throw away the earlier green cycles, and in any case they can discard uncommitted work the user had. After restoring, re-run the tests to confirm you are back at green.
+
 **One test at a time.** Don't write all the tests up front and then all the code. Tests written in a batch are written against a design you imagined; each cycle teaches you something about the real one, and the later tests should benefit from it.
 
 **Show the evidence.** Never report a test result you did not just see in real output. When you tell the user about a red or green step, include the command and the failing or passing line, not a paraphrase. There is no need to narrate every cycle; the final report and anything surprising are enough.
@@ -80,11 +91,11 @@ Then return to RED with the next item.
 ## Rules that keep the tests honest
 
 - **Don't weaken a test to make it pass.** Loosening an assertion, deleting a case, adding a skip, swallowing an exception or pasting the actual output in as the expected value all turn the test into decoration. If you believe a test is wrong, say why and fix it as a separate, deliberate step.
-- **Intended behavior changes are different.** When the task changes what the code should do, existing tests that assert the old behavior must change. Update those tests first, watch them fail, then change the code, and say which tests changed and why.
+- **Intended behavior changes are different.** When the task changes what the code should do, existing tests that assert the old behavior must change. Update those tests first, watch them fail, then change the code, and say which tests changed and why. When the task removes behavior, delete the tests for it in the same change and say which ones went.
 - **Don't special-case test inputs** in production code (`if input == "test-value"`). The implementation has to be general.
 - **Don't mock the unit under test.** Mock only real boundaries (network, clock, filesystem, randomness, third-party services), and prefer fakes or in-memory versions where they exist. A test that mocks the thing it tests only tests the mock.
 - **Keep tests deterministic.** Inject or freeze time and random seeds. No sleeps, no dependence on test order.
-- **Don't rerun a flaky test until it passes.** A test that fails only sometimes is pointing at something real (time, ordering, shared state, concurrency). Find the source, or report it if it isn't yours.
+- **Don't rerun a flaky test until it passes.** A test that fails only sometimes is pointing at something real (time, ordering, shared state, concurrency). Running it again once or twice to learn whether a failure is intermittent, and whether it also happens without your change, is diagnosis and is fine; treating the lucky pass as the result is not. Find the source, or report it if it isn't yours.
 - **Leave unrelated tests alone.** Report tests that were already failing; don't fix, skip or delete them as a side effect.
 - **Keep the loop small.** One behavior per cycle. If a cycle needs more than about 20 to 30 lines of production code, split it.
 
@@ -92,16 +103,16 @@ Then return to RED with the next item.
 
 1. Write a test that **reproduces the bug** and fails, showing the wrong behavior. Write it at the lowest level that shows the bug; if it only appears when parts are combined, test at that level.
 2. Check that it fails *because of the bug* and not for another reason.
-3. If you can't reproduce it, say so before changing code. A fix for a bug you never saw fail is a guess, and should be labeled as one.
+3. If you can't reproduce it, stop before changing code and report what you tried. A fix for a bug you never saw fail is a guess: make one only if the user wants it, and label it as unverified.
 4. Fix the code and watch the test go green.
-5. Ask **where else this bug could live.** Search for the same pattern and add tests for those places.
+5. Ask **where else this bug could live.** Search for the same pattern and report what you find. Test and fix those places only when the request covers them or the user agrees; unrequested fixes elsewhere widen the change beyond what was asked.
 6. Keep the regression test and name it after the bug.
 
 ## Hunting bugs (medium and large work)
 
 After each feature on the list is green, spend a minute trying to break it:
 
-- **Mutation check.** Break the code on purpose: flip a `<` to `<=`, drop a branch, return early. If no test fails, a test is missing; add it. Then restore the code, re-run the tests, and check `git diff` to confirm the mutation is gone and only your intended change remains.
+- **Mutation check.** Break the code on purpose: flip a `<` to `<=`, drop a branch, return early. If no test fails, a test is missing; add it. Then restore the code (see "Undoing"), re-run the tests, and confirm the mutation is gone and only your intended change remains: check `git diff` for tracked files, and re-read the mutated lines in any file that is new, because untracked files do not appear in `git diff`.
 - **Property tests.** For parsers, serializers, sorting, math and data transforms, add property-based tests if the project already has a library for them (Hypothesis, fast-check, proptest). Typical properties: round-trip (`decode(encode(x)) == x`), idempotence, "output is sorted", "length is preserved".
 - **Error paths.** Every `raise`, `throw`, error return or `catch` you added should have a test that triggers it.
 - **Read the diff as a reviewer.** For each changed line, ask which test would fail if it were wrong. Lines no test would catch are where bugs hide.
@@ -117,13 +128,13 @@ A refactor changes structure and keeps behavior, so there is no new failing test
 
 ## Changing code that has no tests
 
-Before changing untested code, write **characterization tests** that pin down what it does now, odd parts included. Get them green against the unchanged code, then change it under their protection.
+Before changing untested code, write **characterization tests** that pin down what it does now, odd parts included. Get them green against the unchanged code, then change it under their protection. Pin the behavior you are about to change and what that change could break, not the whole module; for small work that can be a single test.
 
-These tests pass on the first run by design, so the usual "watch it fail" evidence is missing. Get it another way: break the code briefly, confirm the test notices, and restore it.
+These tests pass on the first run by design, so the usual "watch it fail" evidence is missing. Get it another way: break the code briefly, confirm the test notices, restore it (see "Undoing") and confirm the test is green again.
 
 If the code can't be tested as written (hidden dependencies, globals, hard-wired I/O), make the smallest mechanical change that opens it up, such as passing the dependency in as a parameter, and nothing more until tests exist.
 
-If you find a real bug while doing this, note it and fix it separately with the bug-fix flow above.
+If you find a real bug while doing this, pin the current behavior anyway, note the bug and report it. Fix it, separately and with the bug-fix flow above, only when it is part of the request, blocks it, or the user agrees.
 
 ## Finishing
 

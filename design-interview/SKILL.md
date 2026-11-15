@@ -3,6 +3,7 @@ name: design-interview
 description: "Pre-implementation workflow for a new feature or a bug fix. Explores the codebase, then interviews the user on design decisions (feature) or investigates the root cause (bug). Writes no code until the user approves."
 argument-hint: "[feature or bug description]"
 disable-model-invocation: true
+model: claude-fable-5-2
 ---
 
 # Design Interview
@@ -10,12 +11,15 @@ disable-model-invocation: true
 A pre-implementation workflow. Its output is shared understanding, not code. The user invoked this because they want to settle the design (or the diagnosis) before anything changes, so until they approve the result:
 
 - **Do not create, edit or scaffold anything in the source tree**, not even a stub or a failing test.
-- **Read and search freely.** Run existing tests, the program, and read-only commands.
-- **Only run commands that are safe to repeat.** Nothing that writes data, runs migrations, installs or upgrades dependencies, changes the working tree or git state (checkout, stash, reset), or touches anything outside local dev. If you need one of these to make progress, ask first and say why.
+- **Read and search freely.** Run read-only commands. Run the existing tests and the program when what they leave behind is local and disposable (build output, caches, a test database the suite creates for itself).
+- **Ask before anything whose effects outlast the run or reach beyond local dev.** That means writing to a real or shared database, running migrations, sending anything to an external service, installing or upgrading dependencies, and changing the working tree or git state (checkout, stash, reset, bisect). Say what it would change and why you need it. If you cannot tell whether running something is safe, treat it as not safe.
+- **When the investigation itself needs a change** (a bug that only shows on a write, a temporary log line, `git bisect`), do it on a throwaway copy of the repository in a temp directory where that is practical, and delete the copy afterwards. Otherwise ask.
 
 Approval means an explicit go-ahead on the finished brief or report. Answering an interview question, or agreeing with a recommendation along the way, is not approval to build.
 
-Request: `$ARGUMENTS`. If that is empty, ask the user for it in one sentence.
+Request: `$ARGUMENTS`. If that is empty, or shows up as a literal placeholder, ask the user for it in one sentence.
+
+If the request points at a brief or report saved by an earlier run, do not start over. Read it, check that it still matches the code (the paths exist, the behavior it cites is unchanged), raise anything that has gone stale, then ask for the go-ahead and continue under "After the user approves".
 
 ## 0. Pick the mode and size the effort
 
@@ -87,7 +91,7 @@ Keep asking until an engineer could implement it without making a product or des
 
 ### Step 5: Deliver the brief
 
-End with an **Implementation brief**. Implementation may happen after `/clear` or in another session, so write it for a reader who has not seen this conversation: full paths, no "as discussed above". Scale it to the task and leave out any section that has nothing in it.
+End with an **Implementation brief**. Implementation may happen in a fresh session, so write it for a reader who has not seen this conversation: full paths, no "as discussed above". Scale it to the task and leave out any section that has nothing in it.
 
 - **Goal**: one or two sentences, including the problem being solved
 - **Scope**: in / out
@@ -100,8 +104,9 @@ End with an **Implementation brief**. Implementation may happen after `/clear` o
 - **Acceptance criteria**: observable checks that show it is done
 - **Test plan**: the cases that must be covered
 - **Risks, open questions and deferred items**
+- **How to implement**: the rules under "After the user approves", copied in, so they reach a session that never loaded this skill
 
-Then offer to save the brief as a markdown file (see "Saving the result") and ask whether to proceed to implementation. Do not start coding until the user says so.
+Then ask two separate things, in this order: whether to save the brief as a markdown file (see "Saving the result"), and whether to proceed to implementation. A reply that clearly answers one settles only that one. If a reply could be answering either, it is not approval to build: ask. Do not start coding until the user says so.
 
 ---
 
@@ -110,7 +115,7 @@ Then offer to save the brief as a markdown file (see "Saving the result") and as
 ### Step 1: Explore and reproduce
 
 - Find the code path behind the reported behavior.
-- Try to reproduce: run the relevant tests or the program. If you need a script to exercise existing code, put it in a temp directory outside the source tree and remove it when done. It must only call existing code, never patch it.
+- Try to reproduce: run the relevant tests or the program. If you need a script to exercise existing code, put it in a temp directory outside the source tree. It must only call existing code, never patch it. Keep it until the fix has been verified against it, or until the user decides not to proceed, then remove it. Include its content or the exact commands in the report so the reproduction can be rebuilt in another session.
 - Check logs and recent changes in the area (`git log`, `git blame`).
 - Record what you ran and what you observed.
 
@@ -138,18 +143,21 @@ If blocked, ask for information that isn't in the code or logs: exact repro step
 - **Fix options**: 1-3 approaches with tradeoffs and a recommendation (described, not written)
 - **Regression test**: the case to add (described, not written)
 - **Confidence**: high / medium / low, and what would raise it. If you never reproduced the bug, confidence is medium at most.
+- **How to implement**: the rules under "After the user approves", copied in
 
-Then offer to save the report (see "Saving the result") and ask which fix option to proceed with, if any. Do not write it until the user says so.
+If the evidence did not single out one cause, say so at the top. **Root cause** becomes the ranked candidates, and **Fix options** becomes the next diagnostic step: what to observe, what that needs (temporary logging, access to data or an environment), and what each outcome would mean. Ask for the go-ahead on that step, not on a fix.
+
+Then ask two separate things, in this order: whether to save the report (see "Saving the result"), and which fix option to proceed with, if any. A reply that could be answering either is not approval to build: ask. Do not write the fix until the user says so.
 
 ---
 
 ## Saving the result
 
-A brief or report that exists only in the conversation is lost on `/clear` and can be thinned by compaction. After delivering it, offer to save it as a markdown file where the repo keeps specs or design docs (ask where if there is no obvious place). This is the one file you may write before approval, and only when the user says yes.
+A brief or report that exists only in the conversation is lost when the session ends or is cleared, and can be thinned by compaction. After delivering it, offer to save it as a markdown file where the repo keeps specs or design docs (ask where if there is no obvious place). This is the one file you may write before approval, and only when the user says yes.
 
 ## After the user approves
 
-The brief or report is now the contract.
+The brief or report is now the contract. It decides what gets built. Other skills active during implementation (test-driven development, code quality, project structure) decide how: their process and style rules apply, the brief's test plan is the starting test list, and where they would have you pick an interpretation yourself, the first rule below wins. Give one final report covering all of them.
 
 - **Feature**: follow the build order. If you meet a decision the brief doesn't cover, stop and ask rather than choosing; then add the answer to the decisions log.
 - **Bug**: write the regression test first and watch it fail, then make the fix, then confirm the test passes and the original reproduction no longer shows the symptom.

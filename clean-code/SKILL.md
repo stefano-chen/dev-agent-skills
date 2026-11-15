@@ -9,11 +9,25 @@ Clean code is code the next reader can understand, change and trust quickly. You
 
 ## What wins when goals conflict
 
-1. **What the user and the project say.** Explicit instructions, `CLAUDE.md`, `CONTRIBUTING.md` and linter/formatter configs override everything below.
+1. **What the user and the project say.** Explicit instructions, `CLAUDE.md`, `CONTRIBUTING.md` and linter/formatter configs override the choices below.
 2. **Correctness.** Clean code that does the wrong thing is worthless.
-3. **Consistency with the surrounding code.** A "better" pattern used in one file makes the codebase harder to read, not easier. Match what is there, even where this skill would choose differently, and mention the disagreement instead of acting on it.
+3. **Consistency with the surrounding code.** A "better" pattern used in one file makes the codebase harder to read, not easier. Match what is there (naming, layout, error mechanism, test style), even where this skill would choose differently, and mention the disagreement instead of acting on it.
 4. **Simplicity.** The least code and the fewest concepts that fully solve the problem.
-5. **The defaults in this file.**
+5. **The habits and defaults in this file.**
+
+Two things sit outside this ranking, because neither an instruction nor a convention makes them acceptable:
+
+- **Defects are not conventions.** Consistency covers style, not flaws. If the neighbors concatenate SQL, swallow errors, log secrets or are buried in noise comments and needless guards, do not copy that into new code. Write the new code correctly in the project's style, leave the existing code alone, and mention the pattern in your report.
+- **Honesty about the result.** An instruction such as "just make CI green" is not a request to weaken a test, hide a failure or claim something works unverified. If the user explicitly asks for a shortcut (skip this test, hard-code that value), do it and say plainly what it leaves broken or unverified.
+
+## With other skills
+
+This skill is about what the code looks like. When other skills are active for the same task, each keeps its own subject:
+
+- An approved brief or spec (for example from a design interview) decides scope and design decisions.
+- A test-driven development skill decides the process for tests, bug fixes and refactors. The versions of those flows in this file are the short fallback for when it is not loaded.
+- A project-structure skill decides where files go.
+- Give one final report, not one per skill. If another skill prescribes a report format, use it and add whatever from "Before finishing" it lacks.
 
 ## Scale the effort to the change
 
@@ -21,11 +35,11 @@ Applying every practice to every change is its own kind of mess: a typo fix that
 
 | Change | What it needs |
 | --- | --- |
-| One-line or trivial fix | Match the local style, run the relevant test. Nothing else. |
-| Bug fix | A regression test that fails without the fix, then the smallest fix that addresses the cause rather than the symptom. |
+| Trivial change that alters no logic (typo, message text, comment, rename) | Match the local style, run the relevant test. Nothing else, and no new tests. |
+| Bug fix, of any size including one line | A regression test that fails without the fix, then the smallest fix that addresses the cause rather than the symptom. If the project has no tests at all, do not build a test setup for a small fix: verify it by running the code and say that no regression test exists. |
 | New feature | Read neighbors first, reuse existing helpers, test the new behavior, update docs the change makes wrong. |
 | Refactor | Behavior stays identical; see "Refactoring" below. |
-| New module or project | The full set of defaults below applies, since there is no existing convention to follow. |
+| New module or project | The defaults below apply in full wherever there is no existing convention. A new module inside an existing project still follows that project's conventions. |
 
 ## Before writing
 
@@ -37,11 +51,11 @@ Applying every practice to every change is its own kind of mess: a typo fix that
 
 These are the most common ways a change ends up worse than it needed to be. Check for each before finishing.
 
-- **Over-engineering.** Interfaces with one implementation, config options nobody asked for, factories and wrappers around a single call, generic "frameworks" for one use case. Write for today's requirement; abstractions are cheap to add later and expensive to remove.
+- **Over-engineering.** Interfaces with one implementation (other than at a real boundary such as the database or network, see "Dependency inversion against YAGNI"), config options nobody asked for, factories and wrappers around a single call, generic "frameworks" for one use case. Write for today's requirement; abstractions are cheap to add later and expensive to remove.
 - **Scope creep.** Renaming, reformatting or "improving" code the task did not touch. Reformatting untouched lines also buries the real change in the diff.
 - **Comment noise.** Comments that restate the code, narrate the edit ("changed to use the new helper", "fix for the bug above"), or mark sections of an obvious function. A comment earns its place by saying *why*: a business rule, a trade-off, a non-obvious constraint.
 - **Defensive clutter.** `try/catch` around code that cannot fail, null checks for values the type already guarantees, fallbacks that silently hide a broken state. Validate at the boundary where untrusted data enters, then trust it. Extra guards inside add branches nobody can test and hide real bugs.
-- **Compatibility baggage.** Keeping the old function as a wrapper, re-exporting old names, leaving a "legacy" path, when nothing asked for backward compatibility. Change the call sites and delete the old code.
+- **Compatibility baggage.** Keeping the old function as a wrapper, re-exporting old names, leaving a "legacy" path, when nothing asked for backward compatibility. Change the call sites and delete the old code. This holds only when every caller is in code you can search. A published library API, HTTP endpoint, CLI flag, database schema or stored data format has callers you cannot see: keep it compatible, or ask before breaking it.
 - **Leftovers.** Debug prints, commented-out code, unused imports and variables, scratch files, `TODO`s with no content. Version control remembers deleted code; the file should not.
 - **Tests bent to pass.** Weakening an assertion, skipping a test, or special-casing test input in production code. If a test fails, either the code is wrong or the test's expectation is out of date; work out which and say so.
 - **Unverified claims.** Saying "tests pass" or "this works" without having run anything. Run it, or state plainly what you could not run.
@@ -160,10 +174,12 @@ function getDiscount(user: User): number {
 // After
 const PRO_DISCOUNT = 0.2;
 
-function discountFor(user: User): number {
+function getDiscount(user: User): number {
   return user.plan === "pro" ? PRO_DISCOUNT : 0;
 }
 ```
+
+The function keeps its name, because renaming it would touch every caller for no requested reason. Dropping the guards is a cleanup only because the types rule out the cases they covered. If a caller could really pass a missing user, removing the `catch` would change behavior: fix that at the boundary and call it out, do not fold it into a tidy-up.
 
 ## Refactoring
 
@@ -182,12 +198,14 @@ Review the change that was made, not the code you would have written. Group find
 
 For each finding give the location (`file:line`), the concrete impact, and a suggested fix. Say what is good when something is, and say so plainly if the change is fine as it is.
 
+A review changes nothing, so the checklist under "Before finishing" does not apply to it. Run the tests on the change if you can, and say so if you could not; do not report a failure or a pass you did not see.
+
 ## Before finishing
 
-Run the project's formatter, linter and tests on what you changed, then read your own diff from top to bottom as a reviewer would:
+This applies when you changed code. Run the project's formatter, linter and tests on what you changed. If the formatter rewrites lines you did not touch (the file was never formatted), keep its output on your lines only and mention that the file is unformatted. Then read your own diff from top to bottom as a reviewer would:
 
 - [ ] Every changed line traces back to the request.
-- [ ] It reads like the code around it.
+- [ ] It reads like the code around it in style and structure, without copying its defects or clutter.
 - [ ] Nothing from "Habits to catch" is left in: no speculative abstraction, noise comments, needless guards, compatibility shims, debug output or dead code.
 - [ ] New behavior is tested; no test was weakened to pass.
 - [ ] Formatter, linter and tests were actually run and are clean.
